@@ -1,0 +1,370 @@
+
+ <!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management Dashboard</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        .user-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        #status {
+            color: blue;
+            font-weight: bold;
+            min-height: 20px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 7px 12px;
+            margin: 5px 5px 5px 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>User Management Dashboard</h1>
+
+    <div id="status"></div>
+
+    <button id="btn-create">
+        Add New User (POST)
+    </button>
+
+    <div id="user-list"></div>
+
+    <script>
+
+        // API URL
+        const API_URL =
+            'https://jsonplaceholder.typicode.com/users';
+
+        // Selecting HTML elements
+        const userListDiv =
+            document.getElementById('user-list');
+
+        const statusDiv =
+            document.getElementById('status');
+
+        // Store users locally
+        let users = [];
+
+        // Function to display status messages
+        function setStatus(message) {
+            statusDiv.textContent = message;
+        }
+
+        // Function to create and display user cards
+        function displayUsers() {
+
+            // Clear previous users
+            userListDiv.innerHTML = '';
+
+            // Loop through all users
+            users.forEach((user, index) => {
+
+                // Create user card
+                const userCard = document.createElement('div');
+                userCard.className = 'user-card';
+
+                // Create name
+                const name = document.createElement('h3');
+                name.textContent = user.name;
+
+                // Create email
+                const email = document.createElement('p');
+                email.textContent = 'Email: ' + user.email;
+                email.id = 'email-' + user.id;
+
+                // Append name and email
+                userCard.appendChild(name);
+                userCard.appendChild(email);
+
+                // Update button for first user only
+                if (index === 0) {
+
+                    const updateButton =
+                        document.createElement('button');
+
+                    updateButton.textContent = 'Update Email';
+
+                    updateButton.addEventListener('click', () => {
+                        updateUserEmail(user.id);
+                    });
+
+                    userCard.appendChild(updateButton);
+                }
+
+                // Delete button for every user
+                const deleteButton =
+                    document.createElement('button');
+
+                deleteButton.textContent = 'Delete';
+
+                deleteButton.addEventListener('click', () => {
+                    deleteUser(user.id);
+                });
+
+                userCard.appendChild(deleteButton);
+
+                // Add card to user list
+                userListDiv.appendChild(userCard);
+
+            });
+        }
+
+
+        // TASK 1: GET USERS
+        async function loadUsers() {
+
+            setStatus('Loading...');
+
+            let message = '';
+
+            try {
+
+                // Send GET request
+                const response = await fetch(API_URL);
+
+                // Check response status
+                if (!response.ok) {
+                    throw new Error('Failed to fetch users.');
+                }
+
+                // Convert response into JSON
+                users = await response.json();
+
+                // Display users
+                displayUsers();
+
+                message = 'Users loaded successfully!';
+
+            }
+            catch (error) {
+
+                // Handle errors
+                message = 'Error: ' + error.message;
+
+                console.error(error);
+
+            }
+            finally {
+
+                // Remove loading message
+                setStatus(message);
+
+            }
+        }
+
+
+        // TASK 2: CREATE USER (POST)
+        document.getElementById('btn-create')
+            .addEventListener('click', async () => {
+
+                setStatus('Loading...');
+
+                let message = '';
+
+                // New user object
+                const newUser = {
+                    name: 'John Doe',
+                    email: 'john@example.com'
+                };
+
+                try {
+
+                    // Send POST request
+                    const response = await fetch(API_URL, {
+
+                        method: 'POST',
+
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+
+                        // Convert object into JSON string
+                        body: JSON.stringify(newUser)
+
+                    });
+
+                    // Check response
+                    if (!response.ok) {
+                        throw new Error('Failed to create user.');
+                    }
+
+                    // Get API response
+                    const createdUser = await response.json();
+
+                    // Add new user to local array
+                    users.push(createdUser);
+
+                    // Update UI
+                    displayUsers();
+
+                    message = 'New user added successfully!';
+
+                }
+                catch (error) {
+
+                    message = 'Error: ' + error.message;
+
+                    console.error(error);
+
+                }
+                finally {
+
+                    setStatus(message);
+
+                }
+
+            });
+
+
+        // TASK 3: UPDATE USER EMAIL (PUT)
+        async function updateUserEmail(userId) {
+
+            setStatus('Loading...');
+
+            let message = '';
+
+            try {
+
+                // Find selected user
+                const selectedUser = users.find(
+                    user => user.id === userId
+                );
+
+                if (!selectedUser) {
+                    throw new Error('User not found.');
+                }
+
+                // Create updated user object
+                const updatedUser = {
+                    ...selectedUser,
+                    email: 'updated@example.com'
+                };
+
+                // Send PUT request
+                const response = await fetch(
+                    `${API_URL}/${userId}`,
+                    {
+
+                        method: 'PUT',
+
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+
+                        // Send updated user data
+                        body: JSON.stringify(updatedUser)
+
+                    }
+                );
+
+                // Check response
+                if (!response.ok) {
+                    throw new Error('Failed to update user.');
+                }
+
+                // Get updated response
+                const result = await response.json();
+
+                // Update local user data
+                users = users.map(user =>
+                    user.id === userId ? result : user
+                );
+
+                // Update UI
+                displayUsers();
+
+                message = 'User email updated successfully!';
+
+            }
+            catch (error) {
+
+                message = 'Error: ' + error.message;
+
+                console.error(error);
+
+            }
+            finally {
+
+                setStatus(message);
+
+            }
+        }
+
+
+        // TASK 4: DELETE USER
+        async function deleteUser(userId) {
+
+            setStatus('Loading...');
+
+            let message = '';
+
+            try {
+
+                // Send DELETE request
+                const response = await fetch(
+                    `${API_URL}/${userId}`,
+                    {
+                        method: 'DELETE'
+                    }
+                );
+
+                // Check response status
+                if (!response.ok) {
+                    throw new Error('Failed to delete user.');
+                }
+
+                // Remove user from local array
+                users = users.filter(
+                    user => user.id !== userId
+                );
+
+                // Update UI
+                displayUsers();
+
+                message = 'User deleted successfully!';
+
+            }
+            catch (error) {
+
+                message = 'Error: ' + error.message;
+
+                console.error(error);
+
+            }
+            finally {
+
+                // Remove loading message
+                setStatus(message);
+
+            }
+        }
+
+
+        // Load users when page opens
+        loadUsers();
+
+    </script>
+
+</body>
+</html> 
+
+
+
